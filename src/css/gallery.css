@@ -75,3 +75,39 @@
     transform: rotate(360deg);
   }
 }
+
+.button-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  margin-top: 32px;
+}
+
+.load-more {
+  display: inline-block;
+  border-radius: 8px;
+  padding: 8px 16px;
+  background-color: #4e75ff;
+
+  border: none;
+
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: #fff;
+
+  cursor: pointer;
+  transition: background-color 250ms linear, transform 250ms linear;
+}
+
+.load-more:hover {
+  background-color: #6c8cff;
+  transform: scale(1.05);
+}
+
+.is-hidden {
+  display: none;
+}

@@ -1,6 +1,4 @@
-export { createMarkup };
-
-function createMarkup(arr) {
+export function createMarkup(arr) {
   return arr
     .map(
       ({

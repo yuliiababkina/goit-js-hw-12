@@ -1,5 +1,5 @@
 import { createMarkup } from './js/render-functions';
-import { fetchData } from './js/pixabay-api';
+import { getPictures } from './js/pixabay-api';
 
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
@@ -7,9 +7,12 @@ import 'simplelightbox/dist/simple-lightbox.min.css';
 import iziToast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
 
-const form = document.querySelector('.form');
-const gallery = document.querySelector('.gallery');
-const loader = document.querySelector('.loader');
+const refs = {
+  form: document.querySelector('.form'),
+  gallery: document.querySelector('.gallery'),
+  loadMoreBtn: document.querySelector('.load-more'),
+  loader: document.querySelector('.loader'),
+};
 
 let instance = new SimpleLightbox('.gallery a', {
   captions: true,
@@ -20,14 +23,20 @@ let instance = new SimpleLightbox('.gallery a', {
   overlayOpacity: 0.7,
 });
 
-form.addEventListener('submit', handleSearch);
+let page = 1;
+let searchQuery = null;
 
-function handleSearch(event) {
+refs.form.addEventListener('submit', handleSearch);
+refs.loadMoreBtn.addEventListener('click', onLoadMore);
+
+async function handleSearch(event) {
   event.preventDefault();
+  page = 1;
+  refs.gallery.innerHTML = '';
 
-  const query = event.currentTarget.searchQuery.value.trim();
+  searchQuery = event.currentTarget.searchQuery.value.trim();
 
-  if (query === '') {
+  if (!searchQuery) {
     return iziToast.info({
       timeout: 3000,
       position: 'topRight',
@@ -37,33 +46,87 @@ function handleSearch(event) {
   }
 
   showLoader();
+  try {
+    const response = await getPictures(searchQuery, page);
 
-  fetchData(query)
-    .then(data => {
-      if (data.hits.length === 0) {
-        iziToast.error({
-          timeout: 3000,
-          position: 'topRight',
-          title: 'Error',
-          message:
-            'Sorry, there are no images matching your search query. Please try again!',
-        });
-      }
+    if (response.hits.length === 0) {
+      iziToast.error({
+        timeout: 3000,
+        position: 'topRight',
+        title: 'Error',
+        message:
+          'Sorry, there are no images matching your search query. Please try again!',
+      });
+    }
 
-      gallery.innerHTML = createMarkup(data.hits);
-      instance.refresh();
-    })
-    .catch(error => console.log(error))
-    .finally(() => {
-      hideLoader();
-      form.reset();
-    });
+    refs.gallery.innerHTML = createMarkup(response.hits);
+    response.totalHits > response.hits.length
+      ? showLoadMoreBtn()
+      : hideLoadMoreBtn();
+    instance.refresh();
+  } catch (error) {
+    console.log(error.message);
+  } finally {
+    refs.form.reset();
+    hideLoader();
+  }
 }
 
 function showLoader() {
-  loader.classList.remove('hidden');
+  refs.loader.classList.remove('is-hidden');
 }
 
 function hideLoader() {
-  loader.classList.add('hidden');
+  refs.loader.classList.add('is-hidden');
+}
+
+function showLoadMoreBtn() {
+  refs.loadMoreBtn.classList.replace('is-hidden', 'load-more');
+}
+
+function hideLoadMoreBtn() {
+  refs.loadMoreBtn.classList.replace('load-more', 'is-hidden');
+}
+
+async function onLoadMore() {
+  page += 1;
+  hideLoadMoreBtn();
+
+  showLoader();
+  try {
+    const response = await getPictures(searchQuery, page);
+    refs.gallery.insertAdjacentHTML('beforeend', createMarkup(response.hits));
+    instance.refresh();
+
+    let lastPage = Math.ceil(response.totalHits / response.hits.length);
+
+    if (lastPage === page) {
+      onEndOfSearchRequest();
+    }
+
+    const card = document.querySelector('.gallery-item');
+    const cardHeight = card.getBoundingClientRect().height;
+
+    window.scrollBy({
+      left: 0,
+      top: cardHeight * 2,
+      behavior: 'smooth',
+    });
+  } catch (error) {
+    console.log(error.message);
+  } finally {
+    showLoadMoreBtn();
+    hideLoader();
+  }
+}
+
+function onEndOfSearchRequest() {
+  refs.loadMoreBtn.classList.replace('load-more', 'is-hidden');
+
+  return iziToast.info({
+    timeout: 3000,
+    position: 'topRight',
+    title: 'Info',
+    message: 'We are sorry, but you have reached the end of search results.',
+  });
 }
