@@ -1,5 +1,5 @@
-export function createMarkup(arr) {
-  return arr
+export function createMarkup(array, gallery) {
+  const markup = array
     .map(
       ({
         webformatURL,
@@ -32,4 +32,5 @@ export function createMarkup(arr) {
           </li>`
     )
     .join('');
+  gallery.insertAdjacentHTML('beforeend', markup);
 }
